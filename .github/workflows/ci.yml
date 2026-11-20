@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Test, Architecture & OpenAPI Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Run tests and architecture check
+        run: ./gradlew test architectureCheck --no-daemon
+
+      - name: Build services and regenerate OpenAPI contracts
+        # Each service's quarkusBuild runs in its own Gradle invocation to avoid
+        # SmallRye OpenAPI metadata swapping across augmentations in the same JVM.
+        run: |
+          ./gradlew :user-service:quarkusBuild --no-daemon
+          ./gradlew :listing-service:quarkusBuild --no-daemon
+          ./gradlew :image-service:quarkusBuild --no-daemon
+          ./gradlew :messaging-service:quarkusBuild --no-daemon
+
+      - name: Validate OpenAPI contracts and aggregate coverage
+        run: ./gradlew validateOpenApi jacocoAggregatedReport --no-daemon
+
+      - name: Upload JUnit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-test-results
+          path: "**/build/test-results/test/TEST-*.xml"
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-report
+          path: build/reports/jacoco/jacocoAggregatedReport/
+          retention-days: 7
+          if-no-files-found: ignore

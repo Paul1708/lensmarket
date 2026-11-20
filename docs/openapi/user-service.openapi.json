@@ -1,0 +1,614 @@
+{
+  "openapi" : "3.1.0",
+  "components" : {
+    "schemas" : {
+      "ApiErrorResponse" : {
+        "type" : "object",
+        "required" : [ "error", "message", "status", "path" ],
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        }
+      },
+      "CreateUserRequest" : {
+        "type" : "object",
+        "required" : [ "email", "displayName", "password" ],
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "format" : "email"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string",
+            "minLength" : 8,
+            "writeOnly" : true
+          },
+          "role" : {
+            "type" : "string",
+            "default" : "CUSTOMER",
+            "enum" : [ "CUSTOMER", "PHOTOGRAPHER" ]
+          },
+          "bio" : {
+            "type" : [ "string", "null" ]
+          },
+          "location" : {
+            "type" : [ "string", "null" ]
+          }
+        }
+      },
+      "Instant" : {
+        "type" : "string",
+        "format" : "date-time",
+        "examples" : [ "2022-03-10T16:15:50Z" ]
+      },
+      "LoginUserRequest" : {
+        "type" : "object",
+        "required" : [ "email", "password" ],
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "format" : "email"
+          },
+          "password" : {
+            "type" : "string",
+            "minLength" : 1,
+            "writeOnly" : true
+          }
+        }
+      },
+      "LoginUserResponse" : {
+        "type" : "object",
+        "required" : [ "token", "user" ],
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/PrivateUserResponse"
+          }
+        }
+      },
+      "PatchUserProfileRequest" : {
+        "minProperties" : 1,
+        "description" : "Mindestens eines der vier Felder muss vorhanden sein.",
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : [ "string", "null" ]
+          },
+          "bio" : {
+            "type" : [ "string", "null" ]
+          },
+          "location" : {
+            "type" : [ "string", "null" ]
+          },
+          "role" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "CUSTOMER", "PHOTOGRAPHER" ]
+          }
+        }
+      },
+      "PrivateUserResponse" : {
+        "type" : "object",
+        "required" : [ "id", "email", "displayName", "role", "bio", "location", "createdAt", "updatedAt" ],
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "bio" : {
+            "type" : [ "string", "null" ]
+          },
+          "location" : {
+            "type" : [ "string", "null" ]
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "updatedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          }
+        }
+      },
+      "PublicUserResponse" : {
+        "type" : "object",
+        "required" : [ "id", "displayName", "role", "bio", "location", "createdAt", "updatedAt" ],
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "bio" : {
+            "type" : [ "string", "null" ]
+          },
+          "location" : {
+            "type" : [ "string", "null" ]
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "updatedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  },
+  "info" : {
+    "description" : "Konten, Login und öffentliche/private Profile. Das Profilfeld role hat keine Autorisierungswirkung.",
+    "title" : "LensMarket User Service API",
+    "version" : "0.1.0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8081",
+    "description" : "Lokaler Traefik-Gateway"
+  } ],
+  "paths" : {
+    "/users" : {
+      "get" : {
+        "summary" : "Öffentliche Profile auflisten",
+        "responses" : {
+          "200" : {
+            "description" : "Öffentliche Profile",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PublicUserResponse"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "User Resource" ]
+      },
+      "post" : {
+        "summary" : "Nutzerkonto registrieren",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateUserRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Konto angelegt",
+            "headers" : {
+              "Location" : {
+                "description" : "Pfad des öffentlichen Profils",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PrivateUserResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "E-Mail-Adresse existiert bereits; error ist USER_ALREADY_EXISTS",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "User Resource" ]
+      }
+    },
+    "/users/health" : {
+      "get" : {
+        "summary" : "Service-Liveness lesen",
+        "responses" : {
+          "200" : {
+            "description" : "Service ist erreichbar",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "User Resource" ]
+      }
+    },
+    "/users/login" : {
+      "post" : {
+        "summary" : "Anmelden und JWT ausstellen",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginUserRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Login erfolgreich",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginUserResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Anmeldedaten ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "User Resource" ]
+      }
+    },
+    "/users/logout" : {
+      "post" : {
+        "summary" : "JWT validieren und clientseitigen Logout bestätigen",
+        "description" : "Es existiert keine serverseitige Session oder Token-Blacklist; der Client verwirft den Token.",
+        "responses" : {
+          "204" : {
+            "description" : "Token war gültig; keine Antwortnutzlast"
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "User Resource" ]
+      }
+    },
+    "/users/me" : {
+      "get" : {
+        "summary" : "Eigenes privates Profil lesen",
+        "responses" : {
+          "200" : {
+            "description" : "Privates Profil",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PrivateUserResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Ressource nicht gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "User Resource" ]
+      }
+    },
+    "/users/{id}" : {
+      "patch" : {
+        "summary" : "Eigenes Profil partiell ändern",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PatchUserProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Aktualisiertes privates Profil",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PrivateUserResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Identität darf die Ressource nicht ändern",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Ressource nicht gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "User Resource" ]
+      },
+      "get" : {
+        "summary" : "Öffentliches Profil lesen",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Öffentliches Profil ohne E-Mail-Adresse",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicUserResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Ressource nicht gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "User Resource" ]
+      }
+    }
+  }
+}

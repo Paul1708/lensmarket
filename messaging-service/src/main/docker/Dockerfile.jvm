@@ -1,0 +1,15 @@
+# Build stage: build the Quarkus JVM package with the checked-in Gradle wrapper.
+FROM eclipse-temurin:17.0.19_10-jdk-noble AS build
+WORKDIR /workspace
+COPY . .
+RUN sed -i 's/\r$//' gradlew \
+    && chmod +x gradlew \
+    && ./gradlew clean quarkusBuild --no-daemon -x test
+
+# Runtime stage: run only the generated Quarkus app on a small JRE image.
+FROM eclipse-temurin:17.0.19_10-jre-noble
+WORKDIR /app
+COPY --from=build /workspace/build/quarkus-app/ /app/
+EXPOSE 8080
+USER 1001
+CMD ["java", "-jar", "/app/quarkus-run.jar"]

@@ -1,0 +1,1034 @@
+{
+  "openapi" : "3.1.0",
+  "components" : {
+    "schemas" : {
+      "ApiErrorResponse" : {
+        "type" : "object",
+        "required" : [ "error", "message", "status", "path" ],
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ChangeListingStatusRequest" : {
+        "type" : "object",
+        "required" : [ "status" ],
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "PAUSED", "SOLD" ]
+          }
+        }
+      },
+      "CreateListingRequest" : {
+        "type" : "object",
+        "required" : [ "title", "description" ],
+        "properties" : {
+          "title" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "description" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "priceHint" : {
+            "type" : [ "number", "null" ],
+            "minimum" : 0
+          },
+          "location" : {
+            "type" : [ "string", "null" ]
+          },
+          "cameraModel" : {
+            "type" : [ "string", "null" ]
+          },
+          "lensModel" : {
+            "type" : [ "string", "null" ]
+          },
+          "tags" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "Instant" : {
+        "type" : "string",
+        "format" : "date-time",
+        "examples" : [ "2022-03-10T16:15:50Z" ]
+      },
+      "ListingResponse" : {
+        "type" : "object",
+        "required" : [ "id", "ownerUserId", "title", "description", "priceHint", "location", "cameraModel", "lensModel", "tags", "imageIds", "status", "createdAt" ],
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "ownerUserId" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "priceHint" : {
+            "type" : [ "number", "null" ],
+            "minimum" : 0
+          },
+          "location" : {
+            "type" : [ "string", "null" ]
+          },
+          "cameraModel" : {
+            "type" : [ "string", "null" ]
+          },
+          "lensModel" : {
+            "type" : [ "string", "null" ]
+          },
+          "tags" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "imageIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "readOnly" : true
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "PAUSED", "SOLD" ]
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          }
+        }
+      },
+      "PatchListingRequest" : {
+        "minProperties" : 1,
+        "description" : "Mindestens eines der Felder muss vorhanden sein.",
+        "type" : "object",
+        "properties" : {
+          "title" : {
+            "type" : [ "string", "null" ],
+            "minLength" : 1
+          },
+          "description" : {
+            "type" : [ "string", "null" ],
+            "minLength" : 1
+          },
+          "priceHint" : {
+            "type" : [ "number", "null" ],
+            "minimum" : 0
+          },
+          "location" : {
+            "type" : [ "string", "null" ]
+          },
+          "cameraModel" : {
+            "type" : [ "string", "null" ]
+          },
+          "lensModel" : {
+            "type" : [ "string", "null" ]
+          },
+          "tags" : {
+            "type" : [ "array", "null" ],
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "UpdateListingRequest" : {
+        "type" : "object",
+        "required" : [ "title", "description" ],
+        "properties" : {
+          "title" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "description" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "priceHint" : {
+            "type" : [ "number", "null" ],
+            "minimum" : 0
+          },
+          "location" : {
+            "type" : [ "string", "null" ]
+          },
+          "cameraModel" : {
+            "type" : [ "string", "null" ]
+          },
+          "lensModel" : {
+            "type" : [ "string", "null" ]
+          },
+          "tags" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  },
+  "info" : {
+    "description" : "Anzeigen, öffentliche Suche und besitzergeschützte Verwaltung. Öffentliche Lesewege liefern ausschließlich ACTIVE-Anzeigen.",
+    "title" : "LensMarket Listing Service API",
+    "version" : "0.1.0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8081",
+    "description" : "Lokaler Traefik-Gateway"
+  } ],
+  "paths" : {
+    "/listings" : {
+      "get" : {
+        "summary" : "Öffentliche ACTIVE-Anzeigen suchen",
+        "parameters" : [ {
+          "description" : "Standard 50",
+          "required" : false,
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        }, {
+          "required" : false,
+          "name" : "location",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "required" : false,
+          "name" : "maxPrice",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "number", "null" ]
+          }
+        }, {
+          "required" : false,
+          "name" : "minPrice",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "number", "null" ]
+          }
+        }, {
+          "required" : false,
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        }, {
+          "required" : false,
+          "name" : "ownerUserId",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "description" : "Freitext für Titel/Beschreibung",
+          "required" : false,
+          "name" : "q",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "required" : false,
+          "name" : "tag",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Offset/Limit-paginierte Liste ohne Gesamtzähler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ListingResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, etwa ungültige Pagination, Preise oder Statusübergänge",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "Listing Resource" ]
+      },
+      "post" : {
+        "summary" : "Eigene Anzeige anlegen",
+        "description" : "Owner und Startstatus ACTIVE werden serverseitig gesetzt; Bild-IDs kommen ausschließlich aus dem image-watermarked-Eventflow.",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateListingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Anzeige angelegt",
+            "headers" : {
+              "Location" : {
+                "description" : "Öffentlicher Listing-Pfad",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListingResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, etwa ungültige Pagination, Preise oder Statusübergänge",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Listing Resource" ]
+      }
+    },
+    "/listings/health" : {
+      "get" : {
+        "summary" : "Service-Liveness lesen",
+        "responses" : {
+          "200" : {
+            "description" : "Service ist erreichbar",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "Listing Resource" ]
+      }
+    },
+    "/listings/mine" : {
+      "get" : {
+        "summary" : "Eigene Anzeigen in allen Status suchen",
+        "parameters" : [ {
+          "description" : "Standard 50",
+          "required" : false,
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        }, {
+          "required" : false,
+          "name" : "location",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "required" : false,
+          "name" : "maxPrice",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "number", "null" ]
+          }
+        }, {
+          "required" : false,
+          "name" : "minPrice",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "number", "null" ]
+          }
+        }, {
+          "required" : false,
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Freitext für Titel/Beschreibung",
+          "required" : false,
+          "name" : "q",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "required" : false,
+          "schema" : {
+            "enum" : [ "ACTIVE", "PAUSED", "SOLD" ]
+          },
+          "name" : "status",
+          "in" : "query"
+        }, {
+          "required" : false,
+          "name" : "tag",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Offset/Limit-paginierte Liste ohne Gesamtzähler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ListingResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, etwa ungültige Pagination, Preise oder Statusübergänge",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Listing Resource" ]
+      }
+    },
+    "/listings/mine/{id}" : {
+      "get" : {
+        "summary" : "Eigene Anzeige unabhängig vom Status lesen",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Anzeige",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListingResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, etwa ungültige Pagination, Preise oder Statusübergänge",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Nutzer:in besitzt die Anzeige nicht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige nicht gefunden oder im öffentlichen Pfad nicht ACTIVE",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Listing Resource" ]
+      }
+    },
+    "/listings/{id}" : {
+      "put" : {
+        "summary" : "Editierbare Felder einer eigenen Anzeige vollständig ersetzen",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateListingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Anzeige",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListingResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, etwa ungültige Pagination, Preise oder Statusübergänge",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Nutzer:in besitzt die Anzeige nicht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige nicht gefunden oder im öffentlichen Pfad nicht ACTIVE",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Listing Resource" ]
+      },
+      "patch" : {
+        "summary" : "Editierbare Felder einer eigenen Anzeige partiell ändern",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PatchListingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Anzeige",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListingResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, etwa ungültige Pagination, Preise oder Statusübergänge",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Nutzer:in besitzt die Anzeige nicht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige nicht gefunden oder im öffentlichen Pfad nicht ACTIVE",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Listing Resource" ]
+      },
+      "get" : {
+        "summary" : "Öffentliche ACTIVE-Anzeige lesen",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Anzeige",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListingResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, etwa ungültige Pagination, Preise oder Statusübergänge",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige nicht gefunden oder im öffentlichen Pfad nicht ACTIVE",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "Listing Resource" ]
+      },
+      "delete" : {
+        "summary" : "Eigene Anzeige per Soft-Delete löschen",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Anzeige gelöscht; listing-deleted liegt in der Outbox"
+          },
+          "400" : {
+            "description" : "Validierungsfehler, etwa ungültige Pagination, Preise oder Statusübergänge",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Nutzer:in besitzt die Anzeige nicht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige nicht gefunden oder im öffentlichen Pfad nicht ACTIVE",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Listing Resource" ]
+      }
+    },
+    "/listings/{id}/status" : {
+      "patch" : {
+        "summary" : "Status einer eigenen Anzeige wechseln",
+        "description" : "Erlaubt ACTIVE ↔ PAUSED sowie ACTIVE/PAUSED → SOLD. SOLD ist terminal; derselbe Status ist idempotent.",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeListingStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Anzeige",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ListingResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, etwa ungültige Pagination, Preise oder Statusübergänge",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Nutzer:in besitzt die Anzeige nicht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige nicht gefunden oder im öffentlichen Pfad nicht ACTIVE",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Listing Resource" ]
+      }
+    }
+  }
+}

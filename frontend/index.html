@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LensMarket</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260810">
+</head>
+
+<body>
+
+
+
+  <nav class="nav">
+    <div class="logo" onclick="showPage('home')">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M4 8h2l2-3h8l2 3h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" />
+        </svg>
+      </div>
+      <span><strong style="color:#2563eb">Lens</strong>Market</span>
+    </div>
+    <div class="nav-links">
+      <button class="nav-link active" id="nav-home" onclick="showPage('home')">Entdecken</button>
+      <button class="nav-link" id="nav-mine" style="display:none" onclick="showPage('my-listings')">Meine
+        Anzeigen</button>
+      <button class="nav-link" id="nav-msgs" onclick="showPage('messages')" style="position:relative">Nachrichten<span
+          id="msgs-badge"
+          style="display:none;position:absolute;top:4px;right:-2px;width:8px;height:8px;border-radius:50%;background:#e74c3c"></span></button>
+      <button class="nav-link" id="nav-about" onclick="showPage('about')">Über uns</button>
+    </div>
+    <div class="nav-right">
+      <button class="btn" id="nav-btn-login" onclick="showPage('login')">Anmelden</button>
+      <button class="btn btn-primary" id="nav-btn-register" onclick="showPage('register')">Registrieren</button>
+      <button class="btn btn-primary" id="nav-btn-create" style="display:none" onclick="showPage('create')">+ Anzeige
+        erstellen</button>
+      <button class="btn" id="nav-btn-user" style="display:none" onclick="showPage('profile')"></button>
+      <button class="btn" id="nav-btn-logout" style="display:none" onclick="logout()">Abmelden</button>
+    </div>
+  </nav>
+
+
+
+  <!-- HOME PAGE -->
+  <div id="page-home" class="page active">
+    <div class="hero">
+      <h1>Fotos von Hobbyfotograf:innen</h1>
+      <p>Entdecke einzigartige Bilder und trete direkt mit den Anbietenden in Kontakt.</p>
+      <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Suche nach Motiven, Orten, Farben..." autocomplete="off">
+      </div>
+    </div>
+    <div id="api-error-home" class="api-error">
+      ⚠️ Anzeigen konnten nicht geladen werden.
+      <button class="btn" style="margin-left:8px" onclick="loadListings()">Erneut versuchen</button>
+    </div>
+    <div class="gallery" id="gallery"></div>
+    <button class="btn load-more" id="load-more-btn" style="display:none">Mehr anzeigen</button>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">🛡️</div>
+        <h3>Schutz der Bildrechte</h3>
+        <p>Deine Bilder werden automatisch mit Wasserzeichen geschützt.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">💬</div>
+        <h3>Direkter Kontakt</h3>
+        <p>Tausche dich direkt mit Interessierten über unsere Nachrichtenfunktion aus.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📷</div>
+        <h3>Für Hobbyfotograf:innen</h3>
+        <p>Eine Plattform für Fotograf:innen, die Bilder zeigen und verkaufen möchten.</p>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- DETAIL PAGE -->
+  <div id="page-detail" class="page">
+    <div class="detail-back" onclick="goBack()">← Zurück</div>
+    <div class="detail-grid">
+      <div>
+        <div class="detail-img-wrap">
+          <img id="detail-img" src="" alt="">
+        </div>
+      </div>
+      <div class="detail-panel">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+            <div id="detail-title" class="detail-title"></div>
+          </div>
+          <div id="detail-tags" style="font-size:12px;color:#888"></div>
+        </div>
+        <div id="detail-price" class="detail-price"></div>
+        <div>
+          <div style="font-size:13px;font-weight:500;margin-bottom:6px">Beschreibung</div>
+          <div id="detail-desc" class="detail-desc"></div>
+        </div>
+        <div id="detail-meta"></div>
+        <div class="seller-row">
+          <div id="detail-avatar" class="seller-avatar"></div>
+          <div>
+            <div id="detail-seller" class="seller-name"></div>
+            <div id="detail-since" class="seller-since"></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="detail-message-btn" style="width:100%;padding:10px">Nachricht
+          senden</button>
+        <button class="btn" id="detail-seller-profile-btn" style="width:100%;padding:10px">Anbieterprofil
+          ansehen</button>
+        <div id="detail-owner-actions" style="display:none;border-top:1px solid #eee;margin-top:8px;padding-top:12px">
+          <div style="font-size:12px;color:#888;margin-bottom:8px">Das ist deine eigene Anzeige</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" id="detail-edit-btn" style="flex:1">Bearbeiten</button>
+            <button class="btn" id="detail-status-btn" style="flex:1"></button>
+            <button class="btn" id="detail-delete-btn" style="flex:1;color:#c0392b">Löschen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ANBIETERPROFIL PAGE -->
+  <div id="page-seller-profile" class="page">
+    <div class="detail-back" onclick="goBack()">← Zurück</div>
+    <div class="create-wrap">
+      <div class="create-card">
+        <div class="seller-row" style="margin-bottom:16px">
+          <div id="seller-profile-avatar" class="seller-avatar"></div>
+          <div>
+            <div id="seller-profile-name" class="seller-name" style="font-size:18px"></div>
+            <div id="seller-profile-role" class="seller-since"></div>
+          </div>
+        </div>
+        <div id="seller-profile-bio" style="margin-bottom:12px;color:#444"></div>
+        <div id="seller-profile-meta" class="form-hint"></div>
+      </div>
+    </div>
+    <h3 style="margin:24px 4px 12px">Anzeigen von diesem Anbieter</h3>
+    <div class="gallery" id="seller-profile-listings"></div>
+  </div>
+
+
+
+  <!-- MEINE ANZEIGEN PAGE -->
+  <div id="page-my-listings" class="page">
+    <div class="hero">
+      <h1>Meine Anzeigen</h1>
+      <p>Alle deine veröffentlichten, pausierten und verkauften Anzeigen im Überblick.</p>
+    </div>
+    <div id="my-listings-empty" class="api-error" style="display:none">
+      Du hast noch keine Anzeigen veröffentlicht.
+    </div>
+    <div class="gallery" id="my-listings-grid"></div>
+  </div>
+
+
+
+  <!-- MESSAGES PAGE -->
+  <div id="page-messages" class="page">
+    <div class="msg-layout">
+      <div class="msg-sidebar">
+        <div class="msg-sidebar-header">Nachrichten</div>
+        <div class="conv-list" id="conv-list"></div>
+      </div>
+      <div class="chat-area">
+        <div class="chat-header">
+          <div class="conv-avatar" id="chat-avatar"></div>
+          <div>
+            <div style="font-size:14px;font-weight:500" id="chat-name"></div>
+            <div style="font-size:11px;color:#999" id="chat-sub"></div>
+          </div>
+          <button id="chat-delete-btn" class="btn" style="margin-left:auto;display:none" onclick="removeActiveConversation()" title="Verlauf entfernen">Verlauf entfernen</button>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input">
+          <input type="text" id="msg-input" placeholder="Nachricht schreiben...">
+          <button class="send-btn" onclick="sendMsg()">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ABOUT PAGE -->
+  <div id="page-about" class="page">
+    <div class="hero">
+      <h1>Über LensMarket</h1>
+      <p>
+        Eine Plattform für Hobbyfotograf:innen, die ihre Bilder präsentieren,
+        verkaufen und mit Interessierten in Kontakt treten möchten.
+      </p>
+    </div>
+
+    <div class="about-container">
+
+      <section class="about-section">
+        <h2>Unsere Idee</h2>
+        <p>
+          LensMarket entstand aus der Überzeugung, dass großartige Fotos nicht nur
+          von Profis stammen. Viele Hobbyfotograf:innen erschaffen beeindruckende
+          Aufnahmen, die oft nur auf Festplatten oder in sozialen Netzwerken
+          verschwinden.
+        </p>
+
+        <p>
+          Wir möchten einen Ort schaffen, an dem diese Bilder sichtbar werden und
+          Interessierte direkt mit den Fotograf:innen in Kontakt treten können.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>Was bietet LensMarket?</h2>
+
+        <div class="about-features">
+
+          <div class="about-card">
+            <div class="feature-icon">📷</div>
+            <h3>Fotos präsentieren</h3>
+            <p>
+              Zeige deine besten Aufnahmen einer interessierten Community.
+            </p>
+          </div>
+
+          <div class="about-card">
+            <div class="feature-icon">💬</div>
+            <h3>Direkter Austausch</h3>
+            <p>
+              Interessierte können Fotograf:innen direkt kontaktieren.
+            </p>
+          </div>
+
+          <div class="about-card">
+            <div class="feature-icon">🛡️</div>
+            <h3>Schutz der Urheberrechte</h3>
+            <p>
+              Fotograf:innen behalten die Kontrolle über ihre Werke.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <section class="about-section">
+        <h2>Unsere Vision</h2>
+        <p>
+          Wir möchten LensMarket zu einer Plattform entwickeln, auf der kreative
+          Menschen ihre Arbeit sichtbar machen, Erfahrungen austauschen und neue
+          Möglichkeiten entdecken können.
+        </p>
+      </section>
+    </div>
+  </div>
+
+
+
+  <!-- REGISTER PAGE -->
+  <div id="page-register" class="page">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M4 8h2l2-3h8l2 3h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" />
+            </svg>
+          </div>
+          <span><strong style="color:#2563eb">Lens</strong>Market</span>
+        </div>
+        <h2 class="auth-title">Konto erstellen</h2>
+        <p class="auth-sub">Werde Teil der Fotograf:innen-Community.</p>
+        <div id="reg-error" class="auth-error"></div>
+        <div class="form-group">
+          <label class="form-label">E-Mail-Adresse *</label>
+          <input class="form-input" type="email" id="reg-email" placeholder="deine@email.de">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Anzeigename *</label>
+          <input class="form-input" type="text" id="reg-displayname" placeholder="z.B. LenaF">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Passwort *</label>
+          <input class="form-input" type="password" id="reg-password" placeholder="Mind. 8 Zeichen">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Über mich</label>
+          <textarea class="form-input" id="reg-bio" rows="3" placeholder="Kurze Beschreibung..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Standort</label>
+          <input class="form-input" type="text" id="reg-location" placeholder="z.B. München">
+        </div>
+        <button class="btn btn-primary auth-submit" onclick="handleRegister()">Registrieren</button>
+        <p class="auth-switch">Bereits ein Konto? <a onclick="showPage('login')">Anmelden</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIN PAGE -->
+  <div id="page-login" class="page">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M4 8h2l2-3h8l2 3h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" />
+            </svg>
+          </div>
+          <span><strong style="color:#2563eb">Lens</strong>Market</span>
+        </div>
+        <h2 class="auth-title">Willkommen zurück</h2>
+        <p class="auth-sub">Melde dich mit deiner E-Mail-Adresse an.</p>
+        <div id="login-error" class="auth-error"></div>
+        <div class="form-group">
+          <label class="form-label">E-Mail-Adresse</label>
+          <input class="form-input" type="email" id="login-email" placeholder="deine@email.de">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Passwort</label>
+          <input class="form-input" type="password" id="login-password" placeholder="Dein Passwort">
+        </div>
+        <button class="btn btn-primary auth-submit" onclick="handleLogin()">Anmelden</button>
+        <p class="auth-switch">Noch kein Konto? <a onclick="showPage('register')">Registrieren</a></p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- PROFIL PAGE -->
+  <div id="page-profile" class="page">
+    <div class="create-wrap">
+      <div class="create-card">
+        <h2 class="create-title">Mein Profil</h2>
+        <p class="create-sub">Deine Accountdaten und öffentlichen Profilinformationen.</p>
+        <div id="profile-error" class="create-error"></div>
+        <div id="profile-success" class="create-success"></div>
+        <div class="form-group">
+          <label class="form-label">E-Mail</label>
+          <input class="form-input" type="email" id="profile-email" disabled>
+          <div class="form-hint">Die E-Mail-Adresse kann aktuell nicht geändert werden</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Anzeigename *</label>
+          <input class="form-input" type="text" id="profile-displayname" placeholder="z.B. LenaF">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rolle</label>
+          <select class="form-input" id="profile-role">
+            <option value="CUSTOMER">Käufer:in</option>
+            <option value="PHOTOGRAPHER">Fotograf:in</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bio</label>
+          <textarea class="form-input" id="profile-bio" rows="3" placeholder="Kurze Beschreibung..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Standort</label>
+          <input class="form-input" type="text" id="profile-location" placeholder="z.B. München">
+        </div>
+        <div class="form-hint" id="profile-created-at"></div>
+        <div class="create-actions">
+          <button class="btn" onclick="showPage('home')">Abbrechen</button>
+          <button class="btn btn-primary" onclick="handleUpdateProfile()">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ANZEIGE BEARBEITEN PAGE -->
+  <div id="page-edit-listing" class="page">
+    <div class="create-wrap">
+      <div class="create-card">
+        <h2 class="create-title">Anzeige bearbeiten</h2>
+        <p class="create-sub">Foto, Status und Besitzer können hier nicht geändert werden.</p>
+        <div id="edit-error" class="create-error"></div>
+        <div id="edit-success" class="create-success"></div>
+        <div class="form-group">
+          <label class="form-label">Titel *</label>
+          <input class="form-input" type="text" id="edit-title">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Beschreibung *</label>
+          <textarea class="form-input" id="edit-desc" rows="4"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Preisvorstellung (€)</label>
+            <input class="form-input" type="number" id="edit-price" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Standort</label>
+            <input class="form-input" type="text" id="edit-location">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Kamera</label>
+            <input class="form-input" type="text" id="edit-camera">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Objektiv</label>
+            <input class="form-input" type="text" id="edit-lens">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tags</label>
+          <input class="form-input" type="text" id="edit-tags">
+          <div class="form-hint">Kommagetrennt eingeben</div>
+        </div>
+        <div class="create-actions">
+          <button class="btn" onclick="showPage('my-listings')">Abbrechen</button>
+          <button class="btn btn-primary" onclick="handleUpdateListing()">Änderungen speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- CREATE LISTING PAGE -->
+  <div id="page-create" class="page">
+    <div class="create-wrap">
+      <div class="create-card">
+        <h2 class="create-title">Neue Anzeige erstellen</h2>
+        <p class="create-sub">Fülle die Felder aus und stelle dein Foto ein.</p>
+        <div id="create-error" class="create-error"></div>
+        <div id="create-success" class="create-success"></div>
+        <div class="form-group">
+          <label class="form-label">Foto *</label>
+          <input class="form-input" type="file" id="create-image" accept="image/jpeg,image/png">
+          <div class="form-hint">JPG oder PNG, wird beim Veröffentlichen mit Wasserzeichen versehen</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Titel *</label>
+          <input class="form-input" type="text" id="create-title" placeholder="z.B. Bergsee im Morgenlicht">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Beschreibung *</label>
+          <textarea class="form-input" id="create-desc" rows="4"
+            placeholder="Beschreibe dein Foto, die Stimmung, den Moment..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Preisvorstellung (€)</label>
+            <input class="form-input" type="number" id="create-price" placeholder="z.B. 45" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Standort</label>
+            <input class="form-input" type="text" id="create-location" placeholder="z.B. Tirol, Österreich">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Kamera</label>
+            <input class="form-input" type="text" id="create-camera" placeholder="z.B. Canon EOS R">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Objektiv</label>
+            <input class="form-input" type="text" id="create-lens" placeholder="z.B. 70-200mm">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tags</label>
+          <input class="form-input" type="text" id="create-tags" placeholder="z.B. Landschaft, Natur, Sonnenuntergang">
+          <div class="form-hint">Kommagetrennt eingeben</div>
+        </div>
+        <div class="create-actions">
+          <button class="btn" onclick="showPage('home')">Abbrechen</button>
+          <button class="btn btn-primary" onclick="handleCreateListing()">Anzeige veröffentlichen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <script src="app.js?v=20260810"></script>
+</body>
+
+</html>

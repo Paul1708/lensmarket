@@ -1,0 +1,751 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "description" : "Teilnehmergeschützte Konversationen und idempotentes Nachrichtensenden.",
+    "title" : "LensMarket Messaging Service API",
+    "version" : "0.1.0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8081",
+    "description" : "Lokaler Traefik-Gateway"
+  } ],
+  "components" : {
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    },
+    "schemas" : {
+      "ApiErrorResponse" : {
+        "type" : "object",
+        "required" : [ "error", "message", "status", "path" ],
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ConversationResponse" : {
+        "type" : "object",
+        "required" : [ "id", "listingId", "photographerUserId", "customerUserId", "createdAt", "updatedAt", "status" ],
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "listingId" : {
+            "type" : "string"
+          },
+          "photographerUserId" : {
+            "type" : "string"
+          },
+          "customerUserId" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "updatedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "OPEN", "CLOSED" ]
+          }
+        }
+      },
+      "CreateConversationRequest" : {
+        "type" : "object",
+        "required" : [ "listingId" ],
+        "properties" : {
+          "listingId" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        }
+      },
+      "Instant" : {
+        "type" : "string",
+        "format" : "date-time",
+        "examples" : [ "2022-03-10T16:15:50Z" ]
+      },
+      "MessageResponse" : {
+        "type" : "object",
+        "required" : [ "id", "conversationId", "senderUserId", "body", "createdAt" ],
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "conversationId" : {
+            "type" : "string"
+          },
+          "senderUserId" : {
+            "type" : "string"
+          },
+          "body" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          }
+        }
+      },
+      "SendMessageRequest" : {
+        "type" : "object",
+        "required" : [ "body" ],
+        "properties" : {
+          "body" : {
+            "type" : "string",
+            "maxLength" : 4000,
+            "minLength" : 1
+          }
+        }
+      }
+    }
+  },
+  "paths" : {
+    "/messages/conversations" : {
+      "get" : {
+        "summary" : "Eigene Konversationen auflisten",
+        "description" : "Nach letzter Aktivität sortierte Offset/Limit-Pagination ohne Gesamtzähler.",
+        "parameters" : [ {
+          "description" : "Standard 50",
+          "required" : false,
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        }, {
+          "required" : false,
+          "name" : "listingId",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "required" : false,
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Offset/Limit-paginierte Konversationsliste ohne Gesamtzähler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConversationResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültige Pagination, inaktive Anzeige oder zu langer Key/Text",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Messaging Resource" ]
+      },
+      "post" : {
+        "summary" : "Konversation zu einer ACTIVE-Anzeige erstellen oder wiederverwenden",
+        "description" : "Pro Interessent:in und Anzeige existiert höchstens eine Konversation. Die Anzeigenbesitzer:in kann keine Konversation mit sich selbst eröffnen.",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateConversationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Neue Konversation angelegt",
+            "headers" : {
+              "Location" : {
+                "description" : "Konversationspfad",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConversationResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Bereits vorhandene Konversation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConversationResponse"
+                }
+              }
+            }
+          },
+          "503" : {
+            "description" : "Listing Service nicht erreichbar oder Vertrag ungültig; error ist DEPENDENCY_UNAVAILABLE",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "504" : {
+            "description" : "Listing-Service-Aufruf hat Zeitgrenze überschritten; error ist DEPENDENCY_TIMEOUT",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültige Pagination, inaktive Anzeige oder zu langer Key/Text",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Kein:e Teilnehmer:in oder unerlaubter Selbstkontakt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige, Konversation oder Nachrichtengrundlage nicht gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Messaging Resource" ]
+      }
+    },
+    "/messages/conversations/{conversationId}" : {
+      "delete" : {
+        "summary" : "Konversation aus der eigenen Ansicht entfernen",
+        "description" : "Blendet den Verlauf nur für die aufrufende Person aus. Nachdem beide Teilnehmenden ihn entfernt haben, ist die Konversation geschlossen.",
+        "parameters" : [ {
+          "name" : "conversationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Konversation entfernt (aus eigener Sicht); status ist OPEN oder CLOSED, wenn beide Seiten entfernt haben",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConversationResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültige Pagination, inaktive Anzeige oder zu langer Key/Text",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Kein:e Teilnehmer:in oder unerlaubter Selbstkontakt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige, Konversation oder Nachrichtengrundlage nicht gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Messaging Resource" ]
+      },
+      "get" : {
+        "summary" : "Eigene Konversation lesen",
+        "parameters" : [ {
+          "name" : "conversationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Konversation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConversationResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültige Pagination, inaktive Anzeige oder zu langer Key/Text",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Kein:e Teilnehmer:in oder unerlaubter Selbstkontakt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige, Konversation oder Nachrichtengrundlage nicht gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Messaging Resource" ]
+      }
+    },
+    "/messages/conversations/{conversationId}/messages" : {
+      "post" : {
+        "summary" : "Nachricht als Konversationsteilnehmer:in senden",
+        "description" : "Ein Retry mit demselben Idempotency-Key, derselben Konversation und demselben Sender liefert die ursprüngliche Nachricht und erzeugt weder neue Nachricht noch neues Event.",
+        "parameters" : [ {
+          "name" : "conversationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Optionaler, vom Client stabil wiederverwendeter Schlüssel. Gültigkeitsbereich: Konversation + Sender.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 64,
+            "minLength" : 1
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SendMessageRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Neue Nachricht und message-sent-Outbox-Eintrag gespeichert",
+            "headers" : {
+              "Location" : {
+                "description" : "Logischer Nachrichtenpfad",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Idempotenter Retry; ursprüngliche Nachricht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültige Pagination, inaktive Anzeige oder zu langer Key/Text",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Kein:e Teilnehmer:in oder unerlaubter Selbstkontakt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige, Konversation oder Nachrichtengrundlage nicht gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Messaging Resource" ]
+      },
+      "get" : {
+        "summary" : "Nachrichten einer eigenen Konversation lesen",
+        "parameters" : [ {
+          "name" : "conversationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Standard 100",
+          "required" : false,
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        }, {
+          "required" : false,
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Offset/Limit-paginierte Nachrichtenliste ohne Gesamtzähler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MessageResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültige Pagination, inaktive Anzeige oder zu langer Key/Text",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Kein:e Teilnehmer:in oder unerlaubter Selbstkontakt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Anzeige, Konversation oder Nachrichtengrundlage nicht gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Messaging Resource" ]
+      }
+    },
+    "/messages/health" : {
+      "get" : {
+        "summary" : "Service-Liveness lesen",
+        "responses" : {
+          "200" : {
+            "description" : "Service ist erreichbar",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "Messaging Resource" ]
+      }
+    }
+  }
+}

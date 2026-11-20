@@ -1,0 +1,61 @@
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Gradle, Kotlin and JVM build output
+.gradle/
+.kotlin/
+**/build/
+**/bin/
+out/
+local.properties
+
+# Test, coverage and profiling output
+**/test-results/
+**/reports/
+**/coverage/
+**/jacoco/
+*.profraw
+*.profdata
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+secrets.properties
+config.local.*
+*.secret
+*.secrets
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+*.tmp
+*.swp
+*.orig
+
+# Generated documentation and local exports
+docs/build/
+# quarkus-smallrye-openapi generiert neben *.openapi.json zusaetzlich ein *.yaml-Duplikat;
+# nur die JSON-Dateien sind der versionierte Contract.
+docs/openapi/*.yaml
+docs/kdoc/
+docs/kdoc.pdf
+docs/tools/node_modules/
+docs/tools/combined.html
+site/
+
+# Load-test-results due to large file sizes
+load-tests/results-*.json
+load-tests/breakpoint-*.json
+load-tests/__pycache__/
+
+# Local demo and backup files
+foto.jpg
+watermarked-*.jpg
+reviewed-event.json
+backups/

@@ -1,0 +1,792 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "description" : "Wasserzeichen-Bildupload, Metadaten und Auslieferung. Öffentliche Lesewege liefern ausschließlich WATERMARKED-Bilder.",
+    "title" : "LensMarket Image Service API",
+    "version" : "0.1.0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8081",
+    "description" : "Lokaler Traefik-Gateway"
+  } ],
+  "components" : {
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    },
+    "schemas" : {
+      "ApiErrorResponse" : {
+        "type" : "object",
+        "required" : [ "error", "message", "status", "path" ],
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ChangeImageStatusRequest" : {
+        "type" : "object",
+        "required" : [ "status" ],
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "enum" : [ "WATERMARKED", "ARCHIVED" ]
+          }
+        }
+      },
+      "ImageResponse" : {
+        "type" : "object",
+        "required" : [ "id", "listingId", "ownerUserId", "originalFileName", "mimeType", "width", "height", "status", "watermarkedUrl", "hasFile", "createdAt" ],
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "listingId" : {
+            "type" : "string"
+          },
+          "ownerUserId" : {
+            "type" : "string"
+          },
+          "originalFileName" : {
+            "type" : "string"
+          },
+          "mimeType" : {
+            "type" : "string",
+            "enum" : [ "image/jpeg", "image/png" ]
+          },
+          "width" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32",
+            "minimum" : 1
+          },
+          "height" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32",
+            "minimum" : 1
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "WATERMARKED", "ARCHIVED" ]
+          },
+          "watermarkedUrl" : {
+            "type" : "string",
+            "examples" : [ "/images/7d6d987f/watermarked" ]
+          },
+          "hasFile" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          }
+        }
+      },
+      "Instant" : {
+        "type" : "string",
+        "format" : "date-time",
+        "examples" : [ "2022-03-10T16:15:50Z" ]
+      }
+    }
+  },
+  "paths" : {
+    "/images" : {
+      "get" : {
+        "summary" : "Öffentliche WATERMARKED-Bilder filtern",
+        "parameters" : [ {
+          "required" : false,
+          "name" : "listingId",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "required" : false,
+          "name" : "ownerUserId",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Bildmetadatenliste",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ImageResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültiger Bildinhalt, MIME-Type oder Status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "Image Resource" ]
+      }
+    },
+    "/images/health" : {
+      "get" : {
+        "summary" : "Service-Liveness lesen",
+        "responses" : {
+          "200" : {
+            "description" : "Service ist erreichbar",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "additionalProperties" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "Image Resource" ]
+      }
+    },
+    "/images/mine" : {
+      "get" : {
+        "summary" : "Eigene Bilder einschließlich ARCHIVED filtern",
+        "parameters" : [ {
+          "required" : false,
+          "name" : "listingId",
+          "in" : "query",
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "required" : false,
+          "schema" : {
+            "enum" : [ "WATERMARKED", "ARCHIVED" ]
+          },
+          "name" : "status",
+          "in" : "query"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Bildmetadatenliste",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ImageResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültiger Bildinhalt, MIME-Type oder Status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Image Resource" ]
+      }
+    },
+    "/images/mine/{id}" : {
+      "get" : {
+        "summary" : "Eigene Bildmetadaten unabhängig vom Status lesen",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Bildmetadaten",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImageResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültiger Bildinhalt, MIME-Type oder Status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Nutzer:in besitzt Bild beziehungsweise Anzeige nicht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Bild nicht gefunden oder im öffentlichen Pfad ARCHIVED",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Image Resource" ]
+      }
+    },
+    "/images/mine/{id}/watermarked" : {
+      "get" : {
+        "summary" : "Eigenes Wasserzeichenbild unabhängig vom Status ausliefern",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Binäre Wasserzeichenkopie",
+            "headers" : {
+              "Content-Disposition" : {
+                "description" : "inline mit Dateiname",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "image/jpeg" : {
+                "schema" : {
+                  "format" : "binary",
+                  "type" : "string"
+                }
+              },
+              "image/png" : {
+                "schema" : {
+                  "format" : "binary",
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültiger Bildinhalt, MIME-Type oder Status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Nutzer:in besitzt Bild beziehungsweise Anzeige nicht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Bild nicht gefunden oder im öffentlichen Pfad ARCHIVED",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Image Resource" ]
+      }
+    },
+    "/images/upload" : {
+      "post" : {
+        "summary" : "Bild zu einer eigenen ACTIVE-Anzeige hochladen",
+        "description" : "Akzeptiert JPEG/PNG bis 10 MiB, validiert dekodierbaren Inhalt, verwirft das Original und speichert nur die Wasserzeichenkopie. Der Listing-Eventflow ist nach dem HTTP-Erfolg eventual consistent.",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "listingId" : {
+                    "type" : "string",
+                    "minLength" : 1
+                  },
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary",
+                    "description" : "Dekodierbares image/jpeg oder image/png, maximal 10 MiB"
+                  }
+                },
+                "required" : [ "listingId", "file" ]
+              },
+              "encoding" : {
+                "file" : {
+                  "contentType" : "image/jpeg, image/png"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Wasserzeichenbild und Outbox-Ereignisse gespeichert",
+            "headers" : {
+              "Location" : {
+                "description" : "Öffentlicher Bildmetadaten-Pfad",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImageResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültiger Bildinhalt, MIME-Type oder Status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Nutzer:in besitzt Bild beziehungsweise Anzeige nicht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "503" : {
+            "description" : "Listing Service nicht erreichbar oder Vertrag ungültig; error ist DEPENDENCY_UNAVAILABLE",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "504" : {
+            "description" : "Listing-Service-Aufruf hat Zeitgrenze überschritten; error ist DEPENDENCY_TIMEOUT",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Image Resource" ]
+      }
+    },
+    "/images/{id}" : {
+      "get" : {
+        "summary" : "Öffentliche WATERMARKED-Bildmetadaten lesen",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Bildmetadaten",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImageResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültiger Bildinhalt, MIME-Type oder Status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Bild nicht gefunden oder im öffentlichen Pfad ARCHIVED",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "Image Resource" ]
+      }
+    },
+    "/images/{id}/status" : {
+      "patch" : {
+        "summary" : "Status eines eigenen Bildes ändern",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeImageStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Bildmetadaten",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImageResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültiger Bildinhalt, MIME-Type oder Status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Bearer-Token fehlt oder ist ungültig",
+            "headers" : {
+              "WWW-Authenticate" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Nutzer:in besitzt Bild beziehungsweise Anzeige nicht",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Bild nicht gefunden oder im öffentlichen Pfad ARCHIVED",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "Image Resource" ]
+      }
+    },
+    "/images/{id}/watermarked" : {
+      "get" : {
+        "summary" : "Öffentliches WATERMARKED-Bild ausliefern",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Binäre Wasserzeichenkopie",
+            "headers" : {
+              "Content-Disposition" : {
+                "description" : "inline mit Dateiname",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "image/jpeg" : {
+                "schema" : {
+                  "format" : "binary",
+                  "type" : "string"
+                }
+              },
+              "image/png" : {
+                "schema" : {
+                  "format" : "binary",
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Validierungsfehler, ungültiger Bildinhalt, MIME-Type oder Status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Bild nicht gefunden oder im öffentlichen Pfad ARCHIVED",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Unerwarteter interner Fehler",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags" : [ "Image Resource" ]
+      }
+    }
+  }
+}

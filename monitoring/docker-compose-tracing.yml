@@ -1,0 +1,42 @@
+services:
+  jaeger:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.19.0
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.jaeger-strip.stripprefix.prefixes=/tracing"
+      - "traefik.http.routers.jaeger.entrypoints=web"
+      - "traefik.http.routers.jaeger.rule=PathPrefix(`/tracing`)"
+      - "traefik.http.routers.jaeger.middlewares=jaeger-strip@docker"
+      - "traefik.http.services.jaeger.loadbalancer.server.port=16686"
+
+  user-service:
+    environment:
+      QUARKUS_OTEL_SDK_DISABLED: "false"
+      QUARKUS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4317
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  listing-service:
+    environment:
+      QUARKUS_OTEL_SDK_DISABLED: "false"
+      QUARKUS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4317
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  image-service:
+    environment:
+      QUARKUS_OTEL_SDK_DISABLED: "false"
+      QUARKUS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4317
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  messaging-service:
+    environment:
+      QUARKUS_OTEL_SDK_DISABLED: "false"
+      QUARKUS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4317
+    depends_on:
+      jaeger:
+        condition: service_started

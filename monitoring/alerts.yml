@@ -1,0 +1,86 @@
+groups:
+  - name: lensmarket
+    rules:
+      - alert: LensMarketServiceDown
+        expr: up{job="lensmarket-services"} == 0
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "LensMarket Service ist nicht erreichbar"
+          description: "Prometheus kann {{ $labels.service }} ({{ $labels.instance }}) seit mindestens 30 Sekunden nicht scrapen."
+
+      - alert: LensMarketExpectedServiceMissing
+        expr: absent(up{job="lensmarket-services", service="user-service"}) or absent(up{job="lensmarket-services", service="listing-service"}) or absent(up{job="lensmarket-services", service="image-service"}) or absent(up{job="lensmarket-services", service="messaging-service"})
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Erwartetes LensMarket-Scrape-Ziel fehlt"
+          description: "Prometheus entdeckt den Soll-Service {{ $labels.service }} seit mindestens 30 Sekunden nicht mehr per DNS."
+
+      - alert: LensMarketApiErrors
+        expr: sum by (service, error, status) (rate(lensmarket_api_errors_total[1m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API-Fehler im LensMarket-Service"
+          description: "{{ $labels.service }} liefert {{ $labels.error }} mit HTTP {{ $labels.status }}."
+
+      - alert: LensMarketImageProjectionMiss
+        expr: sum by (service, event_type, result) (rate(lensmarket_events_consumed_total{result="listing_not_found"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Auffälliges Ergebnis bei der Event-Verarbeitung"
+          description: "{{ $labels.service }} verarbeitet {{ $labels.event_type }} mit Ergebnis {{ $labels.result }}."
+
+      # Erfolgsvertrag image-watermarked: attached | duplicate.
+      # listing_not_found wird separat als Projektions-Miss gemeldet; failed hat eine eigene DLQ-Regel.
+      # Erfolgsvertrag listing-deleted: images_deleted | no_images_found | duplicate.
+      - alert: LensMarketUnexpectedEventResult
+        expr: sum by (service, event_type, result) (rate(lensmarket_events_consumed_total{event_type="image-watermarked",result!~"attached|duplicate|listing_not_found|failed"}[5m])) > 0 or sum by (service, event_type, result) (rate(lensmarket_events_consumed_total{event_type="listing-deleted",result!~"images_deleted|no_images_found|duplicate|failed"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unbekanntes Ergebnis bei der Event-Verarbeitung"
+          description: "{{ $labels.service }} meldet für {{ $labels.event_type }} das nicht vereinbarte Ergebnis {{ $labels.result }}."
+
+      - alert: LensMarketOutboxBacklog
+        expr: max by (service) (lensmarket_outbox_pending) > 0 and max by (service) (lensmarket_outbox_oldest_seconds) > 60
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LensMarket Outbox wird nicht abgearbeitet"
+          description: "{{ $labels.service }} besitzt seit über 60 Sekunden unpublizierte Events."
+
+      - alert: LensMarketOutboxPublishFailures
+        expr: sum by (service, event_type) (rate(lensmarket_outbox_publish_failures_total[5m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox-Publikation schlägt fehl"
+          description: "{{ $labels.service }} kann {{ $labels.event_type }} nicht publizieren."
+
+      - alert: LensMarketEventConsumerFailures
+        expr: sum by (service, event_type) (rate(lensmarket_events_consumed_total{result="failed"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Event wurde in die DLQ geleitet"
+          description: "{{ $labels.service }} konnte {{ $labels.event_type }} nicht verarbeiten; DLQ inspizieren und replayen."
+
+      - alert: LensMarketOrphanedImageObjects
+        expr: lensmarket_storage_orphaned_objects{service="image-service"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Verwaiste Bildobjekte erkannt"
+          description: "Der Image Service erkennt {{ $value }} nicht referenzierte MinIO-Objekte."

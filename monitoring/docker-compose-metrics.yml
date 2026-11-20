@@ -1,0 +1,36 @@
+services:
+  prom:
+    image: prom/prometheus:v3.12.0
+    command:
+      - --web.external-url=/prom
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prom-data:/prometheus
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prom.entrypoints=web"
+      - "traefik.http.routers.prom.rule=PathPrefix(`/prom`)"
+      - "traefik.http.services.prom.loadbalancer.server.port=9090"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    labels:
+      - "traefik.enable=false"
+
+  # Postgres-Metriken für die Listing-Datenbank.
+  listing-db-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-lensmarket}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@listing-db:5432/listings?sslmode=disable
+    labels:
+      - "traefik.enable=false"
+
+volumes:
+  prom-data:
